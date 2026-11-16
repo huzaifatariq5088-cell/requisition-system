@@ -1,76 +1,94 @@
-class Requisition:
-    next_id = 10001
-    all_requisitions = []
+# Global variables (shared by all requisitions)
+requisition_counter = 0
+all_requisitions = []
 
+
+class Requisition:
     def __init__(self, date, staff_id, staff_name):
+        global requisition_counter
+        requisition_counter = requisition_counter + 1
+
         self.date = date
-        self.requisition_id = Requisition.next_id
-        Requisition.next_id += 1
         self.staff_id = staff_id
         self.staff_name = staff_name
-        self.items = []
+        self.requisition_id = 10000 + requisition_counter
         self.total = 0
         self.status = "Pending"
-        self.approval_ref = "Not available"
-        Requisition.all_requisitions.append(self)
+        self.approval_reference = "Not available"
+
+        all_requisitions.append(self)
 
     def add_requisition(self, items):
-        """items = list of (item_name, cost). Returns the total."""
-        self.items = items
-        self.total = sum(cost for _, cost in items)
+        # items is a list of (item name, cost), for example [("Pens", 200), ("Paper", 250)]
+        total = 0
+        for item in items:
+            total = total + item[1]
+        self.total = total
         self.approve_requisition()
         return self.total
 
     def approve_requisition(self):
-        """Under $500 = auto approved, otherwise stays pending."""
+        # Under $500 is approved automatically, otherwise it stays pending
         if self.total < 500:
             self.status = "Approved"
-            self._generate_reference()
+            self.make_reference()
         else:
             self.status = "Pending"
-            self.approval_ref = "Not available"
+            self.approval_reference = "Not available"
+
+    def make_reference(self):
+        # Staff ID + last 3 digits of the requisition ID, for example FN19001
+        last_three = str(self.requisition_id)[-3:]
+        self.approval_reference = self.staff_id + last_three
 
     def respond_to_requisition(self, decision):
-        """Manager marks a pending requisition Approved or Not approved."""
-        if self.status != "Pending":
-            print(f"Requisition {self.requisition_id} is not pending.")
-            return
-        if decision == "Approved":
-            self.status = "Approved"
-            self._generate_reference()
-        elif decision == "Not approved":
-            self.status = "Not approved"
-            self.approval_ref = "Not available"
+        # A manager can only respond to a pending requisition
+        if self.status == "Pending":
+            if decision == "Approved":
+                self.status = "Approved"
+                self.make_reference()
+            elif decision == "Not approved":
+                self.status = "Not approved"
+                self.approval_reference = "Not available"
+            else:
+                print("Invalid decision. Use Approved or Not approved.")
         else:
-            print("Invalid decision. Use 'Approved' or 'Not approved'.")
+            print("Requisition", self.requisition_id, "is not pending.")
 
-    def _generate_reference(self):
-        self.approval_ref = f"{self.staff_id}{str(self.requisition_id)[-3:]}"
+    def display_requisitions(self):
+        # Prints every requisition that has been created
+        for r in all_requisitions:
+            print("Date:", r.date)
+            print("Requisition ID:", r.requisition_id)
+            print("Staff ID:", r.staff_id)
+            print("Staff Name:", r.staff_name)
+            print("Total: $" + str(r.total))
+            print("Status:", r.status)
+            print("Approval Reference Number:", r.approval_reference)
+            print()
 
-    @classmethod
-    def display_requisitions(cls):
-        for r in cls.all_requisitions:
-            print(f"Date: {r.date}")
-            print(f"Requisition ID: {r.requisition_id}")
-            print(f"Staff ID: {r.staff_id}")
-            print(f"Staff Name: {r.staff_name}")
-            print(f"Total: ${r.total:g}")
-            print(f"Status: {r.status}")
-            print(f"Approval Reference Number: {r.approval_ref}\n")
+    def requisition_statistics(self):
+        total = 0
+        approved = 0
+        pending = 0
+        not_approved = 0
 
-    @classmethod
-    def requisition_statistics(cls):
-        reqs = cls.all_requisitions
-        stats = {
-            "total": len(reqs),
-            "approved": sum(r.status == "Approved" for r in reqs),
-            "pending": sum(r.status == "Pending" for r in reqs),
-            "not_approved": sum(r.status == "Not approved" for r in reqs),
-        }
+        for r in all_requisitions:
+            total = total + 1
+            if r.status == "Approved":
+                approved = approved + 1
+            elif r.status == "Pending":
+                pending = pending + 1
+            elif r.status == "Not approved":
+                not_approved = not_approved + 1
+
         print("Statistics:")
-        print("Displaying the Requisition Statistics\n")
-        print(f"The total number of requisitions submitted: {stats['total']}\n")
-        print(f"The total number of approved requisitions: {stats['approved']}\n")
-        print(f"The total number of pending requisitions: {stats['pending']}\n")
-        print(f"The total number of not approved requisitions: {stats['not_approved']}")
-        return stats
+        print("Displaying the Requisition Statistics")
+        print()
+        print("The total number of requisitions submitted:", total)
+        print()
+        print("The total number of approved requisitions:", approved)
+        print()
+        print("The total number of pending requisitions:", pending)
+        print()
+        print("The total number of not approved requisitions:", not_approved)
